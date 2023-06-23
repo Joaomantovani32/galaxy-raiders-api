@@ -4,6 +4,8 @@ import galaxyraiders.Config
 import galaxyraiders.core.physics.Point2D
 import galaxyraiders.core.physics.Vector2D
 import galaxyraiders.ports.RandomGenerator
+import kotlin.math.PI
+import kotlin.math.pow
 
 object SpaceFieldConfig {
   private val config = Config(prefix = "GR__CORE__GAME__SPACE_FIELD__")
@@ -27,6 +29,8 @@ object SpaceFieldConfig {
 
 @Suppress("TooManyFunctions")
 data class SpaceField(val width: Int, val height: Int, val generator: RandomGenerator) {
+  var explodedAsteroids: Int = 0
+  var score: Double = 0.0
   val boundaryX = 0.0..width.toDouble()
   val boundaryY = 0.0..height.toDouble()
 
@@ -36,6 +40,9 @@ data class SpaceField(val width: Int, val height: Int, val generator: RandomGene
     private set
 
   var asteroids: List<Asteroid> = emptyList()
+    private set
+
+  var explosions: List<Explosion> = emptyList()
     private set
 
   val spaceObjects: List<SpaceObject>
@@ -61,6 +68,32 @@ data class SpaceField(val width: Int, val height: Int, val generator: RandomGene
     this.asteroids += this.createAsteroidWithRandomProperties()
   }
 
+  fun generateExplosion(missile: Missile, asteroid: Asteroid){
+    this.explosions += Explosion(missile.center)
+    giveScore(asteroid)
+    deleteMissile(missile)
+    deleteAsteroid(asteroid)
+  }
+
+  fun giveScore(asteroid: Asteroid) {
+    val asteroidArea: Double = PI * (asteroid.radius).pow(2)
+    val additionalScore = asteroidArea * asteroid.mass
+    this.score += additionalScore
+  }
+
+  fun deleteAsteroid(asteroid: Asteroid) {
+    this.explodedAsteroids += 1
+    this.asteroids = this.asteroids.filter {
+      it != asteroid
+    }
+  }
+
+  fun deleteMissile(missile: Missile){
+    this.missiles = this.missiles.filter {
+      it != missile
+    }
+  }
+
   fun trimMissiles() {
     this.missiles = this.missiles.filter {
       it.inBoundaries(this.boundaryX, this.boundaryY)
@@ -70,6 +103,12 @@ data class SpaceField(val width: Int, val height: Int, val generator: RandomGene
   fun trimAsteroids() {
     this.asteroids = this.asteroids.filter {
       it.inBoundaries(this.boundaryX, this.boundaryY)
+    }
+  }
+
+  fun trimExplosions() {
+    this.explosions = this.explosions.filter {
+      it.isTriggered
     }
   }
 
